@@ -1,0 +1,337 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard - LoyalBoost</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.7.2/font/bootstrap-icons.css">
+    <style>
+        body {
+            background-color: #f8f9fa;
+            min-height: 100vh;
+        }
+        .points-card {
+            background: linear-gradient(135deg, #6B73FF 0%, #000DFF 100%);
+            color: white;
+            border-radius: 15px;
+            padding: 2rem;
+        }
+        .tier-progress {
+            height: 8px;
+            border-radius: 4px;
+        }
+        .reward-card {
+            transition: transform 0.3s;
+            cursor: pointer;
+        }
+        .reward-card:hover {
+            transform: translateY(-5px);
+        }
+        .transaction-item {
+            border-left: 4px solid transparent;
+            transition: background-color 0.2s;
+        }
+        .transaction-item.earned {
+            border-left-color: #28a745;
+        }
+        .transaction-item.spent {
+            border-left-color: #dc3545;
+        }
+        .transaction-item:hover {
+            background-color: #f8f9fa;
+        }
+    </style>
+</head>
+<body>
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+        <div class="container">
+            <a class="navbar-brand" href="/">LoyalBoost</a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav me-auto">
+                    <li class="nav-item">
+                        <a class="nav-link active" href="/dashboard">Dashboard</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="#rewards">Rewards</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="#transactions">Transactions</a>
+                    </li>
+                </ul>
+                <div class="d-flex align-items-center">
+                    <span class="text-light me-3" id="customerName"></span>
+                    <button class="btn btn-outline-light" onclick="logout()">Logout</button>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container py-4">
+        <!-- Points Overview -->
+        <div class="row mb-4">
+            <div class="col-md-6">
+                <div class="points-card">
+                    <h3 class="mb-4">Points Balance</h3>
+                    <h1 class="display-4 mb-3" id="totalPoints">0</h1>
+                    <p class="mb-2">Current Tier: <span id="currentTier">Bronze</span></p>
+                    <div class="progress tier-progress mb-2">
+                        <div class="progress-bar" id="tierProgress" role="progressbar" style="width: 0%"></div>
+                    </div>
+                    <small id="tierMessage">Points needed for next tier: <span id="pointsToNextTier">1000</span></small>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="card h-100">
+                    <div class="card-body">
+                        <h3 class="card-title mb-4">Quick Stats</h3>
+                        <div class="row g-3">
+                            <div class="col-6">
+                                <div class="border rounded p-3">
+                                    <h6 class="text-muted mb-1">Points Earned</h6>
+                                    <h4 id="totalEarned">0</h4>
+                                </div>
+                            </div>
+                            <div class="col-6">
+                                <div class="border rounded p-3">
+                                    <h6 class="text-muted mb-1">Points Spent</h6>
+                                    <h4 id="totalSpent">0</h4>
+                                </div>
+                            </div>
+                            <div class="col-6">
+                                <div class="border rounded p-3">
+                                    <h6 class="text-muted mb-1">Rewards Redeemed</h6>
+                                    <h4 id="rewardsRedeemed">0</h4>
+                                </div>
+                            </div>
+                            <div class="col-6">
+                                <div class="border rounded p-3">
+                                    <h6 class="text-muted mb-1">Member Since</h6>
+                                    <h4 id="memberSince">-</h4>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Available Rewards -->
+        <section id="rewards" class="mb-4">
+            <h3 class="mb-4">Available Rewards</h3>
+            <div class="row g-4" id="rewardsContainer">
+                <div class="col-12 text-center">
+                    <p>Loading rewards...</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- Recent Transactions -->
+        <section id="transactions">
+            <h3 class="mb-4">Recent Transactions</h3>
+            <div class="card">
+                <div class="list-group list-group-flush" id="transactionsContainer">
+                    <div class="list-group-item text-center">
+                        <p>Loading transactions...</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // Check authentication
+        const token = localStorage.getItem('token');
+        const customer = JSON.parse(localStorage.getItem('customer') || '{}');
+        
+        if (!token || !customer) {
+            window.location.href = '/login';
+        }
+
+        // Update customer info
+        document.getElementById('customerName').textContent = `${customer.firstName} ${customer.lastName}`;
+        document.getElementById('totalPoints').textContent = customer.totalPoints.toLocaleString();
+        document.getElementById('currentTier').textContent = customer.currentTier.charAt(0).toUpperCase() + customer.currentTier.slice(1);
+
+        // Tier progress calculation
+        const tierThresholds = {
+            bronze: 0,
+            silver: 1000,
+            gold: 5000,
+            platinum: 10000
+        };
+
+        function updateTierProgress() {
+            const currentPoints = customer.totalPoints;
+            const currentTier = customer.currentTier;
+            let progress = 0;
+            let nextTier = '';
+            let pointsNeeded = 0;
+
+            switch(currentTier) {
+                case 'bronze':
+                    progress = (currentPoints / tierThresholds.silver) * 100;
+                    nextTier = 'Silver';
+                    pointsNeeded = tierThresholds.silver - currentPoints;
+                    break;
+                case 'silver':
+                    progress = ((currentPoints - tierThresholds.silver) / (tierThresholds.gold - tierThresholds.silver)) * 100;
+                    nextTier = 'Gold';
+                    pointsNeeded = tierThresholds.gold - currentPoints;
+                    break;
+                case 'gold':
+                    progress = ((currentPoints - tierThresholds.gold) / (tierThresholds.platinum - tierThresholds.gold)) * 100;
+                    nextTier = 'Platinum';
+                    pointsNeeded = tierThresholds.platinum - currentPoints;
+                    break;
+                case 'platinum':
+                    progress = 100;
+                    document.getElementById('tierMessage').textContent = 'Maximum tier reached!';
+                    return;
+            }
+
+            document.getElementById('tierProgress').style.width = `${Math.min(progress, 100)}%`;
+            document.getElementById('pointsToNextTier').textContent = pointsNeeded.toLocaleString();
+        }
+
+        updateTierProgress();
+
+        // Fetch transactions
+        async function fetchTransactions() {
+            try {
+                const response = await fetch('/api/points/customer/' + customer.id, {
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    }
+                });
+                const data = await response.json();
+
+                if (response.ok && data.transactions) {
+                    let totalEarned = 0;
+                    let totalSpent = 0;
+
+                    const transactionsHtml = data.transactions.map(transaction => {
+                        if (transaction.type === 'earned') totalEarned += transaction.amount;
+                        else totalSpent += transaction.amount;
+
+                        return `
+                            <div class="list-group-item transaction-item ${transaction.type}">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <div>
+                                        <h6 class="mb-0">${transaction.description}</h6>
+                                        <small class="text-muted">
+                                            ${new Date(transaction.createdAt).toLocaleDateString()}
+                                        </small>
+                                    </div>
+                                    <span class="badge ${transaction.type === 'earned' ? 'bg-success' : 'bg-danger'}">
+                                        ${transaction.type === 'earned' ? '+' : '-'}${transaction.amount} points
+                                    </span>
+                                </div>
+                            </div>
+                        `;
+                    }).join('');
+
+                    document.getElementById('transactionsContainer').innerHTML = transactionsHtml || 
+                        '<div class="list-group-item text-center"><p>No transactions yet.</p></div>';
+                    
+                    document.getElementById('totalEarned').textContent = totalEarned.toLocaleString();
+                    document.getElementById('totalSpent').textContent = totalSpent.toLocaleString();
+                }
+            } catch (error) {
+                console.error('Error fetching transactions:', error);
+                document.getElementById('transactionsContainer').innerHTML = 
+                    '<div class="list-group-item text-center"><p>Error loading transactions.</p></div>';
+            }
+        }
+
+        // Fetch rewards
+        async function fetchRewards() {
+            try {
+                const response = await fetch('/api/rewards?available=true', {
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    }
+                });
+                const data = await response.json();
+
+                if (response.ok && data.rewards) {
+                    const rewardsHtml = data.rewards.map(reward => `
+                        <div class="col-md-4">
+                            <div class="card reward-card h-100">
+                                <div class="card-body">
+                                    <h5 class="card-title">${reward.title}</h5>
+                                    <p class="card-text">${reward.description}</p>
+                                    <p class="text-primary">${reward.pointsCost} points</p>
+                                    <button class="btn btn-outline-primary ${customer.totalPoints < reward.pointsCost ? 'disabled' : ''}"
+                                            onclick="redeemReward('${reward._id}')"
+                                            ${customer.totalPoints < reward.pointsCost ? 'disabled' : ''}>
+                                        ${customer.totalPoints < reward.pointsCost ? 
+                                            `Need ${reward.pointsCost - customer.totalPoints} more points` : 
+                                            'Redeem Now'}
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    `).join('');
+
+                    document.getElementById('rewardsContainer').innerHTML = rewardsHtml || 
+                        '<div class="col-12 text-center"><p>No rewards available at the moment.</p></div>';
+                }
+            } catch (error) {
+                console.error('Error fetching rewards:', error);
+                document.getElementById('rewardsContainer').innerHTML = 
+                    '<div class="col-12 text-center"><p>Error loading rewards.</p></div>';
+            }
+        }
+
+        // Redeem reward
+        async function redeemReward(rewardId) {
+            try {
+                const response = await fetch(`/api/rewards/${rewardId}/redeem`, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ customerId: customer.id })
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    // Update local storage with new points balance
+                    const updatedCustomer = { ...customer, totalPoints: customer.totalPoints - data.transaction.amount };
+                    localStorage.setItem('customer', JSON.stringify(updatedCustomer));
+                    
+                    // Refresh the page to show updated points
+                    window.location.reload();
+                } else {
+                    alert(data.message || 'Error redeeming reward. Please try again.');
+                }
+            } catch (error) {
+                console.error('Error redeeming reward:', error);
+                alert('An error occurred. Please try again later.');
+            }
+        }
+
+        // Logout function
+        function logout() {
+            localStorage.removeItem('token');
+            localStorage.removeItem('customer');
+            window.location.href = '/login';
+        }
+
+        // Initial data load
+        fetchTransactions();
+        fetchRewards();
+
+        // Set member since date
+        document.getElementById('memberSince').textContent = 
+            new Date(customer.joinDate || Date.now()).toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
+    </script>
+</body>
+</html> 

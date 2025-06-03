@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LoyalBoost - Customer Loyalty Management</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        .hero {
+            background: linear-gradient(135deg, #6B73FF 0%, #000DFF 100%);
+            color: white;
+            padding: 4rem 0;
+        }
+        .feature-card {
+            transition: transform 0.3s;
+            cursor: pointer;
+        }
+        .feature-card:hover {
+            transform: translateY(-5px);
+        }
+    </style>
+</head>
+<body>
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+        <div class="container">
+            <a class="navbar-brand" href="/">LoyalBoost</a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav ms-auto">
+                    <li class="nav-item">
+                        <a class="nav-link" href="#features">Features</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="#rewards">Rewards</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="/login">Login</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link btn btn-primary ms-2" href="/register">Sign Up</a>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <section class="hero">
+        <div class="container text-center">
+            <h1 class="display-4 mb-4">Welcome to LoyalBoost</h1>
+            <p class="lead mb-4">The smart way to reward your loyal customers</p>
+            <button class="btn btn-light btn-lg">Get Started</button>
+        </div>
+    </section>
+
+    <section id="features" class="py-5">
+        <div class="container">
+            <h2 class="text-center mb-5">Why Choose LoyalBoost?</h2>
+            <div class="row g-4">
+                <div class="col-md-4">
+                    <div class="card feature-card h-100">
+                        <div class="card-body text-center">
+                            <h3 class="h5 mb-3">Easy Points System</h3>
+                            <p class="card-text">Earn points with every purchase and track them easily through our platform.</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="card feature-card h-100">
+                        <div class="card-body text-center">
+                            <h3 class="h5 mb-3">Exclusive Rewards</h3>
+                            <p class="card-text">Redeem your points for exclusive rewards, discounts, and special offers.</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="card feature-card h-100">
+                        <div class="card-body text-center">
+                            <h3 class="h5 mb-3">Tier Benefits</h3>
+                            <p class="card-text">Unlock additional benefits as you progress through our membership tiers.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section id="rewards" class="py-5 bg-light">
+        <div class="container">
+            <h2 class="text-center mb-5">Featured Rewards</h2>
+            <div class="row g-4" id="rewards-container">
+                <!-- Rewards will be loaded dynamically -->
+                <div class="col-12 text-center">
+                    <p>Loading rewards...</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <footer class="bg-dark text-light py-4">
+        <div class="container">
+            <div class="row">
+                <div class="col-md-6">
+                    <h5>LoyalBoost</h5>
+                    <p>Making customer loyalty rewarding for everyone.</p>
+                </div>
+                <div class="col-md-6 text-md-end">
+                    <ul class="list-inline">
+                        <li class="list-inline-item"><a href="#" class="text-light">Terms</a></li>
+                        <li class="list-inline-item"><a href="#" class="text-light">Privacy</a></li>
+                        <li class="list-inline-item"><a href="#" class="text-light">Contact</a></li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </footer>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // Fetch and display featured rewards
+        fetch('/api/rewards?available=true&limit=3')
+            .then(response => response.json())
+            .then(data => {
+                const rewardsContainer = document.getElementById('rewards-container');
+                if (data.rewards && data.rewards.length > 0) {
+                    rewardsContainer.innerHTML = data.rewards.map(reward => `
+                        <div class="col-md-4">
+                            <div class="card h-100">
+                                <div class="card-body">
+                                    <h5 class="card-title">${reward.title}</h5>
+                                    <p class="card-text">${reward.description}</p>
+                                    <p class="text-primary">${reward.pointsCost} points</p>
+                                    <button class="btn btn-outline-primary" onclick="location.href='/login'">
+                                        Login to Redeem
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    `).join('');
+                } else {
+                    rewardsContainer.innerHTML = '<div class="col-12 text-center"><p>No rewards available at the moment.</p></div>';
+                }
+            })
+            .catch(error => {
+                console.error('Error fetching rewards:', error);
+                document.getElementById('rewards-container').innerHTML = 
+                    '<div class="col-12 text-center"><p>Error loading rewards. Please try again later.</p></div>';
+            });
+    </script>
+</body>
+</html> 
